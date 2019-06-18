@@ -1,0 +1,345 @@
+
+---
+title: "Project_1"
+author: "Praveena Tallapragada"
+date: "18/06/2019"
+output: html_document
+---
+
+### LA INTERNATIONAL AIRPORT PASSENGER TRAFFIC BY TERMINAL
+
+[Source File](https://catalog.data.gov/dataset/los-angeles-international-airport-passenger-traffic-by-terminal-756ee)
+
+####Introduction
+
+For my first project, I have selected the "LA International Airport Passenger Traffic by terminal" dataset from Data.gov. This is a simple dataset with 6 variables and 5870 observations. I have selected this dataset to see if I can know the busiest terminal with respect to the total number of passengers.
+
+
+This dataset has the following 6 columns:
+
+1. DataExtractDate	
+
+2. ReportPeriod	
+
+3. Terminal	
+
+4. Arrival_Departure	
+
+5. Domestic_International	
+
+6. Passenger_Count
+
+####Load the data
+
+I will be using the following library's to load, view and clean data:
+
+1. Tidyr
+2. Dplyr
+3. Tidyverse
+
+I have already installed the above three library's, so I will start with loading them.
+
+Loading the library's...
+
+```{r setup,message = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyr)
+library(dplyr)
+library(tidyverse)
+
+```
+
+Load the source file from the working directory, get the working directory and ensure the source files is located in this path...
+
+```{r, echo=T, results='hide'}
+
+getwd()
+
+```
+
+Load the file in R...
+
+```{r,echo=T, results='hide'}
+
+LA_Airport_Source <- read_csv("Los_Angeles_International_Airport_-_Passenger_Traffic_By_Terminal.csv")
+
+```
+
+####View and Understand data
+
+View the source file contents by using the newly created variable "LA_Airport_Data".
+
+```{r}
+
+LA_Airport_Source
+
+```
+
+Know the class of "LA_Airport_Source"
+
+```{r}
+
+class(LA_Airport_Source)
+
+```
+
+View the source file contents as a tibble using the tbl_df. I wanted to see if there is any difference in the way the data is displayed.
+
+```{r}
+
+tbl_df(LA_Airport_Source)
+
+```
+
+View the stucture of the data to know the data types of the variables.
+
+```{r}
+
+str(LA_Airport_Source)
+
+```
+
+View the first and last 10 records to understand the data...
+
+```{r}
+
+
+print.data.frame(head(LA_Airport_Source,10))
+
+print.data.frame(tail(LA_Airport_Source,10))
+
+```
+
+Source file contains data from January 2006 to March 2019. For every terminal, we have passenger counts for arrival or departure and whether it is domestic or international.
+
+"DataExtractDate" and "ReportPeriod" are stored as characters instead of a date time variable. Also the time indicated in the variable 'Reportperiod' is always defaulted to '12:00:00 AM' and therefore I will not be able to find the busy hours at these terminals. I will have to remove it and maybe split the 'ReportPeriod' date into month and year to better understand the passenger traffic and find any patters if possible. I might also have to remove 'DataExtractData' as it does not help in finding out the busiest terminal.
+
+To undertsand the data in the next three columns - "Terminal","Arrival_Departure" and "Domestic_International", I got the unique list from these columns.
+
+```{r}
+
+unique(LA_Airport_Source$Terminal)
+
+unique(LA_Airport_Source$Arrival_Departure)
+
+unique(LA_Airport_Source$Domestic_International)
+
+```
+
+
+The above three variables are categorical and hence it would be better to change the datatype to factor for all three of them.Moreover it would be best to seperate arrivals,departures,domestic and international variables into columns.
+
+Now lets check the range of passenger count, just to have an idea of number of passengers.
+
+```{r}
+
+range(LA_Airport_Source$Passenger_Count)
+
+```
+
+Summary of the source data
+
+```{r}
+
+summary(LA_Airport_Source)
+
+```
+
+
+####Clean the data
+
+1. Remove "DataExtractDate" column.
+2. Split the "ReportPeriod" column and remove the time.Remove 2019 data as it is incomplete.
+3. Make the variables - "Terminal","Arrival_Departure" and    "Domestic_International" as factors and try to spread them if needed.Replace space from Terminal names with underscroes.
+4. Calculate the sum of passenger counts per terminal per year or month and see whether it has increased or decreased from 2006 to 2019.
+5. Find the busiest terminal based on the sum of passenger counts.
+
+
+
+###### Remove "DataExtractDate" column
+
+```{r}
+
+LA_Airport_Modified <- LA_Airport_Source %>% select(ReportPeriod,Terminal,Arrival_Departure,Domestic_International,Passenger_Count) 
+
+LA_Airport_Modified
+
+```
+
+
+###### Split the "ReportPeriod" column and remove the time.Remove data for the year 2019 as it is incomplete.
+
+```{r}
+
+LA_Airport_Modified$ReportPeriod <-  as.Date(LA_Airport_Modified$ReportPeriod, "%m/%d/%Y")
+
+LA_Airport_Modified <- LA_Airport_Modified %>%
+  mutate(Year = format(ReportPeriod, "%Y"),Month = format(ReportPeriod, "%m")) 
+
+LA_Airport_Modified$Year <- as.numeric(LA_Airport_Modified$Year)
+
+LA_Airport_Modified$Month <- as.numeric(LA_Airport_Modified$Month)
+
+LA_Airport_Modified
+
+LA_Airport_Mod <-  LA_Airport_Modified %>%
+filter(Year !=  2019)
+
+LA_Airport_Mod
+
+str(LA_Airport_Mod)
+
+```
+
+###### Make the variables - "Terminal","Arrival_Departure" and "Domestic_International" as factors and try to spread them if needed.Replace space from Terminal names with underscroes.
+
+```{r}
+
+LA_Airport_Mod$Terminal <- gsub("\\s+","_",LA_Airport_Mod$Terminal)
+
+LA_Airport_Mod$Terminal <- as.factor(LA_Airport_Mod$Terminal)
+
+LA_Airport_Mod$Arrival_Departure <- as.factor(LA_Airport_Mod$Arrival_Departure)
+
+LA_Airport_Mod$Domestic_International <- as.factor(LA_Airport_Mod$Domestic_International)
+
+summary(LA_Airport_Mod)
+
+```
+
+###### Calculate the sum of passenger counts per terminal per year or month and see whether it has increased or decreased from 2006 to 2019.
+
+
+```{r}
+
+Yearwise_Data <- LA_Airport_Mod %>%
+  select(Terminal,Year,Passenger_Count) %>%
+  group_by(Terminal,Year) %>%
+  summarize(Passenger_sum = sum(Passenger_Count))
+
+Yearwise_Data
+
+
+```
+
+###### Most number of passengers based on sum of passenger count per year per terminal
+
+```{r}
+
+
+busiest_terminal <- Yearwise_Data%>%
+filter(Passenger_sum == max(Yearwise_Data$Passenger_sum))
+
+busiest_terminal
+
+
+```
+
+###### Domestic vs. International
+
+```{r}
+
+Domestic_International_Data_perYear <- LA_Airport_Mod %>%
+  select(Domestic_International,Year,Passenger_Count) %>%
+  group_by(Domestic_International,Year) %>%
+  summarize(Passenger_sum = sum(Passenger_Count))
+
+Domestic_International_Data_perYear
+
+
+
+Domestic_International_Data_Terminal_Year <- LA_Airport_Mod %>%
+  select(Terminal,Domestic_International,Year,Passenger_Count) %>%
+  group_by(Terminal,Domestic_International,Year) %>%
+  summarize(Passenger_sum = sum(Passenger_Count))
+
+Domestic_International_Data_Terminal_Year
+
+
+
+Domestic_Data_Terminal <- LA_Airport_Mod %>%
+  select(Terminal,Domestic_International,Year,Passenger_Count) %>%
+  filter(Domestic_International == "Domestic") %>%
+  group_by(Terminal,Year) %>%
+  summarize(Passenger_sum = sum(Passenger_Count))
+
+Domestic_Data_Terminal
+
+
+
+International_Data_Terminal <- LA_Airport_Mod %>%
+  select(Terminal,Domestic_International,Year,Passenger_Count) %>%
+  filter(Domestic_International == "International") %>%
+  group_by(Terminal,Year) %>%
+  summarize(Passenger_sum = sum(Passenger_Count))
+
+International_Data_Terminal
+
+
+
+```
+
+
+##### Plots
+
+###### Plot1
+
+```{r}
+
+library(ggplot2)
+library(RColorBrewer)
+library(gganimate)
+library(ggthemes)
+
+plot1<-  ggplot(Yearwise_Data, aes(x = Year, y = Passenger_sum, color = Terminal)) +
+          geom_line() +
+          geom_point() +
+          xlab("Year") +
+          ylab("Passenger Count") +
+          scale_x_continuous(breaks=c(2006,2008,2010,2012,2014,2016,2018)) +
+          scale_y_log10() +
+          transition_reveal(Year) + 
+          scale_color_brewer(palette = "Set3") +
+          ggtitle("LA Passenger Traffic per terminal per year")+
+          theme_grey() +
+          theme(axis.text.x = element_text(angle= 80,hjust=1)) +
+          enter_fade() +
+          exit_fade()
+
+plot1
+
+```
+
+###### Plot2
+```{r}
+
+plot2 <- ggplot(Domestic_International_Data_Terminal_Year, aes(x=Terminal, y=Passenger_sum, frame= Year)) +
+    geom_bar(stat = "identity", position = "stack", aes(fill = Domestic_International)) +
+  scale_y_continuous() +
+      labs( x = 'Terminal', y = 'Passenger Count', title = 'Domestic vs.International Passenger Traffic', caption = "based on data from Data.gov", subtitle = 'Year:{as.integer(frame_time)}')+
+theme(axis.text.x = element_text(angle= 80,hjust=1))
+
+anim1 <- plot2 + transition_time(as.integer(Year))
+
+anim1 
+
+```
+
+###### Plot3
+```{r}
+
+plot3 <- ggplot(Domestic_International_Data_perYear, aes(x = Year, y = Passenger_sum, color = Domestic_International)) +
+          geom_line() 
+
+plot3
+
+```
+
+
+##### Summary
+
+1. Highest passenger count per year(includes domestic and international)  - Tom Bradley International Airport.
+2. Imperial Terminal data was provided from 2006-2016.
+3. Passenger Traffic for domestic travels is far more than international.
+
