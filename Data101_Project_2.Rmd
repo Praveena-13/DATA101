@@ -1,0 +1,288 @@
+
+
+---
+title: "Data101 Project 2"
+author: "Praveena Tallapragada"
+date: "24/06/2019"
+output:
+  html_document:
+    toc: yes
+    toc_depth: '2'
+---
+
+
+#### Dataset - LA International Airport Passenger Traffic by Terminal
+
+[Source File](https://catalog.data.gov/dataset/los-angeles-international-airport-passenger-traffic-by-terminal-756ee)
+
+I have selected the "LA International Airport Passenger Traffic by terminal" dataset from Data.gov. This is a simple dataset with 6 variables and 5870 observations.
+        I had selected this dataset for my Project 1 to see if I can know the busiest terminal with respect to the total number of passengers.
+        For my second project, I would like to find any patterns in passenger traffic by gathering the monthly data for Tom Brady International Terminal.
+
+This dataset has the following 6 columns:
+
+1. DataExtractDate	
+
+2. ReportPeriod	
+
+3. Terminal	
+
+4. Arrival_Departure	
+
+5. Domestic_International	
+
+6. Passenger_Count
+
+#### EDA Principles
+
+##### Formulate your question
+
+I would like to find any patterns in passenger traffic by gathering the monthly data for the year 2018 for one domestic terminal and Tom Brady International Terminal.By observing the passenger traffic on a monthly basis, I hope to find a pattern.
+
+##### Read in your Data
+
+I will be using the following library's to load, view, clean and plot the data:
+
+```{r setup,message = FALSE}
+
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+
+```
+
+Load the source file from the working directory, get the working directory and ensure the source files is located in this path...
+
+```{r, echo=T, results='hide'}
+
+getwd()
+
+```
+
+Load the file in R...
+
+```{r,echo=T, results='hide'}
+
+LA_Airport_Source <- read_csv("Los_Angeles_International_Airport_-_Passenger_Traffic_By_Terminal.csv")
+
+```
+
+##### Check the packaging
+
+```{r}
+nrow(LA_Airport_Source)
+
+ncol(LA_Airport_Source)
+```
+
+##### Run str()
+
+```{r}
+
+str(LA_Airport_Source)
+
+```
+
+##### Look at the top and the bottom of your data
+
+```{r}
+head(LA_Airport_Source[, c(2:6)],10)
+tail(LA_Airport_Source[, c(2:6)],10) 
+
+```
+
+#### Cleaning and preparing data with dplyr
+
+Source file contains data from January 2006 to March 2019. For every terminal, we have passenger counts for arrival or departure and whether it is domestic or international.
+
+"DataExtractDate" and "ReportPeriod" are stored as characters instead of a date time variable. Also the time indicated in the variable 'Reportperiod' is always defaulted to '12:00:00 AM' and therefore it will not be of any use. I will have to remove it and maybe split the 'ReportPeriod' date into month and year to better understand the passenger traffic and find any patters if possible. I will remove 'DataExtractData' as I am not interested in knowing when the data was collected for this project.
+
+To undertsand the data in the next three columns - "Terminal","Arrival_Departure" and "Domestic_International", I will get the unique list from these columns.
+
+```{r}
+
+unique(LA_Airport_Source$Terminal)
+
+unique(LA_Airport_Source$Arrival_Departure)
+
+unique(LA_Airport_Source$Domestic_International)
+
+```
+
+
+The three variables are categorical and hence it would be better to change the datatype to factor for all three of them.
+
+Now lets check the range of passenger count, just to have an idea of number of passengers.
+
+
+```{r}
+
+range(LA_Airport_Source$Passenger_Count)
+
+```
+
+Check for NA's and complete cases
+
+```{r}
+
+which(is.na(LA_Airport_Source))
+
+which(!complete.cases(LA_Airport_Source))
+
+```
+
+Remove "DataExtractDate" column
+
+```{r}
+
+LA_Airport_Modified <- LA_Airport_Source %>% select(ReportPeriod,Terminal,Arrival_Departure,Domestic_International,Passenger_Count) 
+
+LA_Airport_Modified
+
+```
+
+
+Split the "ReportPeriod" column and remove the time.Remove data for the year 2019 as it is incomplete.
+
+```{r}
+
+LA_Airport_Modified$ReportPeriod <-  as.Date(LA_Airport_Modified$ReportPeriod, "%m/%d/%Y")
+
+LA_Airport_Modified <- LA_Airport_Modified %>%
+  mutate(Year = format(ReportPeriod, "%Y"),Month = format(ReportPeriod, "%m")) 
+
+LA_Airport_Modified$Year <- as.numeric(LA_Airport_Modified$Year)
+
+LA_Airport_Modified$Month <- as.numeric(LA_Airport_Modified$Month)
+
+LA_Airport_Modified
+
+LA_Airport_Mod <-  LA_Airport_Modified %>%
+filter(Year !=  2019)
+
+LA_Airport_Mod
+
+str(LA_Airport_Mod)
+
+```
+
+Make the variables - "Terminal","Arrival_Departure" and "Domestic_International" as factors and try to spread them if needed.Replace space from Terminal names with underscroes.
+
+```{r}
+
+LA_Airport_Mod$Terminal <- gsub("\\s+","_",LA_Airport_Mod$Terminal)
+
+LA_Airport_Mod$Terminal <- as.factor(LA_Airport_Mod$Terminal)
+
+LA_Airport_Mod$Arrival_Departure <- as.factor(LA_Airport_Mod$Arrival_Departure)
+
+LA_Airport_Mod$Domestic_International <- as.factor(LA_Airport_Mod$Domestic_International)
+
+summary(LA_Airport_Mod)
+
+```
+
+Calculate the sum of passenger counts per terminal per year per month.
+
+```{r}
+
+Monthwise_Data <- LA_Airport_Mod %>%
+  select(Terminal,Year,Month,Passenger_Count) %>%
+  group_by(Terminal,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) %>%
+arrange(desc(Passenger_sum))
+
+Monthwise_Data
+
+D_I_perM <- LA_Airport_Mod %>%
+  select(Domestic_International,Year,Month,Passenger_Count) %>%
+  group_by(Domestic_International,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) %>%
+  arrange(desc(Passenger_sum))
+
+D_I_perM
+
+
+```
+
+#### ggplot2 - Plots
+
+BoxPlot
+
+```{r}
+
+ boxplot(Monthwise_Data$Passenger_sum, col = "blue")
+
+ boxplot(D_I_perM$Passenger_sum, col = "blue")
+
+```
+Histogram
+
+```{r}
+
+hist(Monthwise_Data$Passenger_sum, col = "red")
+
+```
+Scatterplot
+
+```{r}
+
+
+str(D_I_perM)
+
+ with(D_I_perM, {plot(Month, Passenger_sum,col = as.factor(Domestic_International), xlab = "Month", ylab = "Passenger Count")
+ legend = D_I_perM$Domestic_International})
+ 
+ 
+
+```
+
+ggplot - Tom Brady International Terminal 
+```{r}
+
+
+TB_Monthwise_Data <- LA_Airport_Mod %>%
+  select(Terminal,Year,Month,Passenger_Count) %>%
+  filter(Terminal == "Tom_Bradley_International_Terminal") %>%
+  group_by(Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) %>%
+  arrange(Year)
+
+TB_Monthwise_Data
+
+p1 <- ggplot(data = TB_Monthwise_Data) + 
+  geom_line(mapping = aes(x = Month, y = Passenger_sum,  color = factor(Year)))+
+  labs(x = "Month",y = "Total Passenger Count") +
+  scale_x_continuous(breaks  = c(1,2,3,4,5,6,7,8,9,10,11,12))
+
+p1
+
+p2 <- ggplot(data = TB_Monthwise_Data, mapping = aes(x=factor(Month), y=Passenger_sum)) + 
+  geom_boxplot() +
+  geom_jitter(width = 0.25)
+
+p2
+
+p3 <- ggplot(data = TB_Monthwise_Data, mapping = aes(x = Month, y = Passenger_sum)) +
+  geom_point() +
+  geom_smooth(method = "lm", se=FALSE)
+
+p3
+
+
+p4 <- ggplot(LA_Airport_Modified, aes(ReportPeriod, Passenger_Count, colour = Arrival_Departure)) +
+  geom_line()
+
+p4
+
+p5 <- ggplot(data = Monthwise_Data) + 
+  geom_line(mapping = aes(x = Month, y = Passenger_sum,color = factor(Year))) + 
+  facet_wrap(~ Terminal) +
+  labs(x = "Month",y = "Total Passenger Count") +
+  scale_x_continuous(breaks  = c(2,4,6,8,10,12)) 
+  
+
+p5
+
+```
+
