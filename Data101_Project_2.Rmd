@@ -286,3 +286,30 @@ p5
 
 ```
 
+#### Summary
+
+Using ggplot, I have tried to create 5 plots:
+
+1. ggplot + geom_line: 
+
+This visualizations displays Month on x axis and Passenger sum on y axis from TB_MOnthwise_data df. Year is displayed with different colors on the plot. As I mentioned in the beginning, I wanted to find patterns in passenger traffic by oberseving it on a monthly basis. We can clearly see that beginning 2006 to 2018, the passenger traffic decreases in february and steadily increases until July-August timeframe and then steadily decreases until november and slightly increases over december.Lowest passenger traffic is observed in february and highest passenger traffic is observed in July-August. Maybe during summer everyone is going on vacations and thats why we see the passenger traffic is highest in Tom Brady International Airport during the peak summer time.
+
+2. ggplot + geom_boxplot + geom_jitter : 
+
+This visualizations displays Month on x axis and Passenger sum on y axis from TB_MOnthwise_data df. I have tried to use the boxplot feature with jitter here to observe the Tom Brady International Airport data from 2006- 2018. the jitter feature helps to understand the spread and outliers much more conviniently. We can clearly make out that the median passenger trafic in summer is more than the median during the beginning or end of the year.
+
+3. ggplot+ geom_point + geom_smooth:
+
+I tried to plot the Tom Brady International Terminal data from 2006-2018 using the geom_point and geom_smooth just to try and understand what we can see and interpret.
+I understand from this visualization that the passenger traffic increases from start to end of a year.
+
+4. ggplot + geom_line:
+
+In this visualization I have used the LA_Airport_Modified df.On the x axis, we have the Report Period and y axis we have the passenger count.The color display Arrival or departures.FRom the visualization, we can understand that the passenger counts have been high for arrivals than those of departures.
+
+
+5. ggplot + geom_line + facet_wrap:
+
+Using the facet wrap I have tried to visualize the passenger traffic from 2006-2018 for all the 11 terminals in LA International airport on a monthly basis.Tom Bradley international airport has seen a steady increase in passenger traffic over time.
+
+
