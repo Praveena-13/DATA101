@@ -1,0 +1,402 @@
+---
+title: "Project 3 Statistical Inference"
+author: "Praveena Tallapragada"
+date: "June 29th, 2019"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '4'
+---
+
+### <span style="color:blue">**Introduction**</span>
+
+In my third project, I will perform the t-test on few of my categorical variables(like Arrival_Departure or Domestic_International) to understand the difference in means and decide upon whether or not to reject the null hypothesis based on the p-value.
+
+So far from my Project 1 and Project 2, I have concluded that Tom Bradley International Terminal had the highest Passenger Traffic in 2018 and that the Passenger Traffic is lowest in February and highest in July and August over 12 years(2006-2018).
+
+### <span style="color:blue">**Dataset**</span>
+
+I will use the dataset - "LA International Airport Passenger Traffic by terminal", which I had inititally used for my Project 1 and Project 2. I got this dataset from Data.gov.
+
+[Source File](https://catalog.data.gov/dataset/los-angeles-international-airport-passenger-traffic-by-terminal-756ee)
+
+### <span style="color:blue">**Cleaning Data with dplyr Package**</span>
+
+I will use the same steps to clean and modify data from my Project 1 and Project 2. I had used the dplyr package functions to clean and prepare my data.
+
+
+```{r setup,message = FALSE}
+
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+
+```
+
+Load the source file from the working directory, get the working directory and ensure the source files is located in this path...
+
+```{r, echo=T, results='hide'}
+
+getwd()
+
+```
+
+Load the file in R...
+
+```{r,echo=T, results='hide'}
+
+LA_Airport_Source <- read_csv("Los_Angeles_International_Airport_-_Passenger_Traffic_By_Terminal.csv")
+
+```
+
+Check number of rows and coloumns
+
+```{r}
+nrow(LA_Airport_Source)
+
+ncol(LA_Airport_Source)
+```
+
+Now lets check the range of passenger count, just to have an idea of number of passengers.
+
+
+```{r}
+
+range(LA_Airport_Source$Passenger_Count)
+
+```
+
+Check for NA's and complete cases
+
+```{r}
+
+which(is.na(LA_Airport_Source))
+
+which(!complete.cases(LA_Airport_Source))
+
+```
+
+Remove "DataExtractDate" column
+
+```{r}
+
+LA_Airport_Modified <- LA_Airport_Source %>% select(ReportPeriod,Terminal,Arrival_Departure,Domestic_International,Passenger_Count) 
+
+LA_Airport_Modified
+
+```
+
+
+Split the "ReportPeriod" column and remove the time.Remove data for the year 2019 as it is incomplete.
+
+```{r}
+
+LA_Airport_Modified$ReportPeriod <-  as.Date(LA_Airport_Modified$ReportPeriod, "%m/%d/%Y")
+
+LA_Airport_Modified <- LA_Airport_Modified %>%
+  mutate(Year = format(ReportPeriod, "%Y"),Month = format(ReportPeriod, "%m")) 
+
+LA_Airport_Modified$Year <- as.numeric(LA_Airport_Modified$Year)
+
+LA_Airport_Modified$Month <- as.numeric(LA_Airport_Modified$Month)
+
+LA_Airport_Modified
+
+LA_Airport_Mod <-  LA_Airport_Modified %>%
+filter(Year !=  2019)
+
+LA_Airport_Mod
+
+str(LA_Airport_Mod)
+
+```
+
+Make the variables - "Terminal","Arrival_Departure" and "Domestic_International" as factors. Replace space from Terminal names with underscroes.
+
+```{r}
+
+LA_Airport_Mod$Terminal <- gsub("\\s+","_",LA_Airport_Mod$Terminal)
+
+LA_Airport_Mod$Terminal <- as.factor(LA_Airport_Mod$Terminal)
+
+LA_Airport_Mod$Arrival_Departure <- as.factor(LA_Airport_Mod$Arrival_Departure)
+
+LA_Airport_Mod$Domestic_International <- as.factor(LA_Airport_Mod$Domestic_International)
+
+summary(LA_Airport_Mod)
+
+```
+
+### <span style="color:blue">**ggplot - Tom Bradley International Terminal**</span>
+
+```{r}
+
+TB_Monthwise_Data <- LA_Airport_Mod %>%
+  select(Terminal,Year,Month,Passenger_Count) %>%
+  filter(Terminal == "Tom_Bradley_International_Terminal") %>%
+  group_by(Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) %>%
+  arrange(Year)
+
+TB_Monthwise_Data
+
+p1 <- ggplot(data = TB_Monthwise_Data) + 
+  geom_line(mapping = aes(x = Month, y = Passenger_sum,  color = factor(Year)))+
+  labs(x = "Month",y = "Total Passenger Count") +
+  scale_x_continuous(breaks  = c(1,2,3,4,5,6,7,8,9,10,11,12))
+
+p1
+
+```
+
+### <span style="color:blue">**Statistical Inference**</span>
+
+#### 1. Perform t-test on Domestic and International passenger traffic for all terminals.
+
+```{r}
+
+D_Data <- LA_Airport_Mod %>%
+  select(Domestic_International,Year,Month,Passenger_Count) %>%
+  filter(Domestic_International == "Domestic") %>%
+  group_by(Domestic_International,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) 
+
+I_Data <- LA_Airport_Mod %>%
+  select(Domestic_International,Year,Month,Passenger_Count) %>%
+  filter(Domestic_International == "International") %>%
+  group_by(Domestic_International,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) 
+
+var(D_Data$Passenger_sum)
+
+var(I_Data$Passenger_sum)
+
+t.test(D_Data$Passenger_sum,I_Data$Passenger_sum,var.equal = FALSE)
+
+```
+
+#### 2. Perform t-test on Terminal 5 and Terminal 2 passenger traffic.
+
+
+```{r}
+
+
+Terminal5_Data <- LA_Airport_Mod %>%
+  select(Terminal,Year,Month,Passenger_Count) %>%
+  filter(Terminal == "Terminal_5") %>%
+  group_by(Terminal,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) 
+
+Terminal2_Data <- LA_Airport_Mod %>%
+  select(Terminal,Year,Month,Passenger_Count) %>%
+  filter(Terminal == "Terminal_2") %>%
+  group_by(Terminal,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) 
+
+var(Terminal2_Data$Passenger_sum)
+
+var(Terminal5_Data$Passenger_sum)
+
+t.test(Terminal5_Data$Passenger_sum,Terminal2_Data$Passenger_sum,var.equal = FALSE)
+
+
+```
+
+
+#### 3. Perform t-test on Arrival and Departures for Tom Bradley International Terminal.
+
+
+```{r}
+
+
+TB_A_Data <- LA_Airport_Mod %>%
+  select(Terminal,Arrival_Departure,Year,Month,Passenger_Count) %>%
+  filter(Arrival_Departure == "Arrival" , Terminal == "Tom_Bradley_International_Terminal" ) %>%
+  group_by(Terminal,Arrival_Departure,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) 
+
+TB_D_Data <- LA_Airport_Mod %>%
+  select(Terminal,Arrival_Departure,Year,Month,Passenger_Count) %>%
+  filter(Terminal == "Tom_Bradley_International_Terminal" , Arrival_Departure == "Departure") %>%
+  group_by(Terminal,Arrival_Departure,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) 
+
+var(TB_A_Data$Passenger_sum)
+
+var(TB_D_Data$Passenger_sum)
+
+t.test(TB_A_Data$Passenger_sum,TB_D_Data$Passenger_sum,var.equal = FALSE)
+
+
+```
+
+#### 4. Perform t-test on Domestic and International for Tom Bradley International Terminal.
+
+
+```{r}
+
+
+TB_Dom_Data <- LA_Airport_Mod %>%
+  select(Terminal,Domestic_International,Year,Month,Passenger_Count) %>%
+  filter(Domestic_International == "Domestic" , Terminal == "Tom_Bradley_International_Terminal" ) %>%
+  group_by(Terminal,Domestic_International,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) 
+
+TB_Int_Data <- LA_Airport_Mod %>%
+  select(Terminal,Domestic_International,Year,Month,Passenger_Count) %>%
+  filter(Terminal == "Tom_Bradley_International_Terminal" , Domestic_International == "International") %>%
+  group_by(Terminal,Domestic_International,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) 
+
+var(TB_Dom_Data$Passenger_sum)
+
+var(TB_Int_Data$Passenger_sum)
+
+t.test(TB_Int_Data$Passenger_sum,TB_Dom_Data$Passenger_sum,var.equal = FALSE)
+
+
+```
+
+#### 5. Perform t-test on Domestic Arrival vs International Arrivals for  all terminals.
+
+
+```{r}
+
+
+Arrival_Dom_Data <- LA_Airport_Mod %>%
+  select(Terminal,Arrival_Departure,Domestic_International, Year,Month,Passenger_Count) %>%
+  filter(Arrival_Departure == "Arrival" , Domestic_International == "Domestic" ) %>%
+  group_by(Terminal,Arrival_Departure,Domestic_International,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) 
+
+Arrival_Int_Data <- LA_Airport_Mod %>%
+  select(Terminal,Arrival_Departure,Domestic_International, Year,Month,Passenger_Count) %>%
+  filter(Arrival_Departure == "Arrival" , Domestic_International == "International") %>%
+  group_by(Terminal,Arrival_Departure,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) 
+
+var(Arrival_Dom_Data$Passenger_sum)
+
+var(Arrival_Int_Data$Passenger_sum)
+
+t.test(Arrival_Dom_Data$Passenger_sum,Arrival_Int_Data$Passenger_sum,var.equal = FALSE)
+
+
+```
+
+#### 6. Perform t-test on Domestic Departures vs International Departures for  all terminals.
+
+```{r}
+
+
+Departure_Dom_Data <- LA_Airport_Mod %>%
+  select(Terminal,Arrival_Departure,Domestic_International, Year,Month,Passenger_Count) %>%
+  filter(Arrival_Departure == "Departure" , Domestic_International == "Domestic" ) %>%
+  group_by(Terminal,Arrival_Departure,Domestic_International,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) 
+
+Departure_Int_Data <- LA_Airport_Mod %>%
+  select(Terminal,Arrival_Departure,Domestic_International, Year,Month,Passenger_Count) %>%
+  filter(Arrival_Departure == "Departure" , Domestic_International == "International") %>%
+  group_by(Terminal,Arrival_Departure,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) 
+
+var(Departure_Dom_Data$Passenger_sum)
+
+var(Departure_Int_Data$Passenger_sum)
+
+t.test(Departure_Dom_Data$Passenger_sum,Departure_Int_Data$Passenger_sum,var.equal = FALSE)
+
+
+```
+#### 7. Perform t-test on Arrivals and Departures for all terminals.
+
+```{r}
+
+
+Departure_Data <- LA_Airport_Mod %>%
+  select(Arrival_Departure,Year,Month,Passenger_Count) %>%
+  filter(Arrival_Departure == "Departure") %>%
+  group_by(Arrival_Departure,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) 
+
+Arrival_Data <- LA_Airport_Mod %>%
+  select(Arrival_Departure,Year,Month,Passenger_Count) %>%
+  filter(Arrival_Departure == "Arrival") %>%
+  group_by(Arrival_Departure,Year,Month) %>%
+  summarize(Passenger_sum = sum(Passenger_Count)) 
+
+var(Departure_Data$Passenger_sum)
+
+var(Arrival_Data$Passenger_sum)
+
+t.test(Departure_Data$Passenger_sum,Arrival_Data$Passenger_sum,var.equal = FALSE)
+
+
+```
+
+#### 8. Perform t-test on Domestic Arrivals and Domestic Departures for all terminals.
+
+```{r}
+
+var(Arrival_Dom_Data$Passenger_sum)
+
+var(Departure_Dom_Data$Passenger_sum)
+
+t.test(Departure_Dom_Data$Passenger_sum,Arrival_Dom_Data$Passenger_sum,var.equal = FALSE)
+
+
+```
+
+#### 9. Perform t-test on International Arrivals and International Departures for all terminals.
+
+```{r}
+
+var(Arrival_Int_Data$Passenger_sum)
+
+var(Departure_Int_Data$Passenger_sum)
+
+t.test(Arrival_Int_Data$Passenger_sum,Departure_Int_Data$Passenger_sum,var.equal = FALSE)
+
+
+```
+
+
+### <span style="color:blue">**Summary**</span>
+
+
+Statistical Inference for total passenger traffic(sum of passenger counts) from 2006-2018 for LA International Airport all Terminals.
+
+
+
+
+|      Group 1    |     Group 2      | t-Value | P-Value |         Inference      |
+|-----------------|------------------|---------|---------|------------------------|
+|Domestic (All Terminals)|International (All Terminals)|42.054|2.2e-16|Reject - P value is very small. Very Unlikeley scenario.|
+|Terminal 5|Terminal 2|7.6025|7.717e-13|Reject - P value is very small. Very Unlikeley scenario.|
+|Arrivals (TB Intl Terminal)|Departures (TB Intl Terminal)|3.655|0.0003022|Acceptable compared to the above two.|
+|Domestic(TB Intl Terminal)|International(TB Intl Terminal)|41.182|2.2e-16|Reject - P value is very small. Very Unlikeley scenario.|
+|Domestic Arrivals (All Terminals)|International Arrivals (All Terminals )|19.441|2.2e-16|Reject - P value is very small. Very Unlikeley scenario.|
+|Domestic Departures (All Terminals)|International Departures (All Terminals )|22.643|2.2e-16|Reject - P value is very small. Very Unlikeley scenario.|
+|Arrivals (All Terminals)|Departures (All Terminals)|0.1636|0.8702|Accept - P value is greater than 0.5.It is a likely scenario.|
+|Domestic Arrivals (All Terminals)|Domestic Departures (All Terminals )|0.019967|0.9841|Accept - P value is greater than 0.5.It is a likely scenario.|
+|International Arrivals (All Terminals)|International Departures (All Terminals )|0.90892|0.3635|Accept - P value is greater than 0.5.It is a likeley scenario.|
+
+
+
+
+
+<span style="color:red">**The highest P value of 0.9841 was calculated for Domestic Arrivals(All Terminals) vs Domestic Departures(All Terminals).**</span>
+
+
+
+
+
+
+
+
+
+
+
+
